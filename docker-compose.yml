@@ -14,7 +14,7 @@ services:
   mysql:
     image: mysql
     environment:
-      - MYSQL_ROOT_PASSWORD=sekret_root_password
+      - MYSQL_ROOT_PASSWORD=super-secret-secret
       - MYSQL_DATABASE=monica
       - MYSQL_USER=homestead
       - MYSQL_PASSWORD=secret
