@@ -24,9 +24,25 @@ $db = [
     | to use as your default connection for all database work. Of course
     | you may use many connections at once using the Database library.
     |
+    | PostgreSQL users: insert 'pgsql' and edit the 'pgsql' section below.
+    |
     */
 
     'default' => env('DB_CONNECTION', 'mysql'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Use utf8mb4 charset format
+    |--------------------------------------------------------------------------
+    |
+    | Use the new utf8mb4 charset format
+    | ⚠ be sure your DBMS supports utf8mb4 format
+    | See https://dev.mysql.com/doc/refman/5.5/en/charset-unicode-utf8mb4.html
+    | MySQL > 5.7.7 fully support it.
+    |
+    */
+
+    'use_utf8mb4' => env('DB_USE_UTF8MB4', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -42,6 +58,10 @@ $db = [
     | so make sure you have the driver for your particular database of
     | choice installed on your machine before you begin development.
     |
+    | PostgreSQL users: comment out host and port for UNIX domain socket
+    | connections (local file-based connection without the need to edit the
+    | firewall settings).
+    |
     */
 
     'connections' => [
@@ -56,26 +76,28 @@ $db = [
             'driver' => 'mysql',
             'host' => env('DB_HOST', 'localhost'),
             'port' => env('DB_PORT', '3306'),
+            'unix_socket' => env('DB_UNIX_SOCKET', ''),
             'database' => env('DB_DATABASE', 'forge'),
             'username' => env('DB_USERNAME', 'forge'),
             'password' => env('DB_PASSWORD', ''),
-            'charset' => 'utf8',
-            'collation' => 'utf8_unicode_ci',
+            'charset' => env('DB_USE_UTF8MB4', true) ? 'utf8mb4' : 'utf8',
+            'collation' => env('DB_USE_UTF8MB4', true) ? 'utf8mb4_unicode_ci' : 'utf8_unicode_ci',
             'prefix' => env('DB_PREFIX', ''),
             'strict' => false,
             'engine' => null,
         ],
 
         'testing' => [
-            'driver'    => 'mysql',
-            'host'      => env('DB_TEST_HOST'),
-            'database'  => env('DB_TEST_DATABASE'),
-            'username'  => env('DB_TEST_USERNAME'),
-            'password'  => env('DB_TEST_PASSWORD'),
-            'charset'   => 'utf8',
-            'collation' => 'utf8_unicode_ci',
-            'prefix'    => '',
-            'strict'    => false,
+            'driver' => 'mysql',
+            'host' => env('DB_TEST_HOST'),
+            'unix_socket' => env('DB_TEST_UNIX_SOCKET', ''),
+            'database' => env('DB_TEST_DATABASE'),
+            'username' => env('DB_TEST_USERNAME'),
+            'password' => env('DB_TEST_PASSWORD'),
+            'charset' => env('DB_USE_UTF8MB4', true) ? 'utf8mb4' : 'utf8',
+            'collation' => env('DB_USE_UTF8MB4', true) ? 'utf8mb4_unicode_ci' : 'utf8_unicode_ci',
+            'prefix' => env('DB_TEST_PREFIX', ''),
+            'strict' => false,
         ],
 
         'pgsql' => [
@@ -85,8 +107,20 @@ $db = [
             'database' => env('DB_DATABASE', 'forge'),
             'username' => env('DB_USERNAME', 'forge'),
             'password' => env('DB_PASSWORD', ''),
-            'charset' => 'utf8',
             'prefix' => env('DB_PREFIX', ''),
+            'charset' => 'utf8',
+            'schema' => 'public',
+        ],
+
+        'pgsqltesting' => [
+            'driver' => 'pgsql',
+            'host' => env('DB_TEST_HOST'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_TEST_DATABASE'),
+            'username' => env('DB_TEST_USERNAME'),
+            'password' => env('DB_TEST_PASSWORD'),
+            'charset' => 'utf8',
+            'prefix' => '',
             'schema' => 'public',
         ],
 
@@ -124,7 +158,7 @@ $db = [
             'host' => env('REDIS_HOST', 'localhost'),
             'password' => env('REDIS_PASSWORD', null),
             'port' => env('REDIS_PORT', 6379),
-            'database' => 0,
+            'database' => env('REDIS_DATABASE', 0),
         ],
 
     ],
@@ -142,14 +176,18 @@ if (env('HEROKU')) {
     $db['connections']['heroku'] = [
         'driver' => 'mysql',
         'host' => $url['host'],
-        'port' => $url['port'],
-        'database' => substr($url['path'], 1),
+        'database' => starts_with($url['path'], '/') ? str_after($url['path'], '/') : $url['path'],
         'username' => $url['user'],
         'password' => $url['pass'],
-        'charset' => 'utf8',
-        'prefix' => '',
+        'charset' => env('DB_USE_UTF8MB4', true) ? 'utf8mb4' : 'utf8',
+        'collation' => env('DB_USE_UTF8MB4', true) ? 'utf8mb4_unicode_ci' : 'utf8_unicode_ci',
+        'prefix' => env('DB_PREFIX', ''),
+        'strict' => false,
         'schema' => 'public',
     ];
+    if (array_key_exists('port', $url)) {
+        $db['connections']['heroku']['port'] = $url['port'];
+    }
 }
 
 return $db;

@@ -6,7 +6,7 @@
 
   <div class="{{ Auth::user()->getFluidLayout() }}">
     <div class="row">
-      <div class="col-xs-12 col-sm-6 col-sm-offset-3">
+      <div class="col-xs-12 col-sm-6 col-sm-offset-3 col-sm-offset-3-right">
 
         @if (session('status'))
           <div class="alert alert-success">
@@ -17,14 +17,14 @@
         <h2>{{ trans('people.people_add_missing') }}</h2>
 
         @if (! auth()->user()->account->hasLimitations())
-          <p class="import">{!! trans('people.people_add_import') !!}</p>
+          <p class="import">{!! trans('people.people_add_import', ['url' => '/settings/import']) !!}</p>
         @endif
 
-        <form action="/people" method="POST">
+        <form action="{{ route('people.store') }}" method="POST">
           {{ csrf_field() }}
 
           {{-- This check is for the cultures that are used to say the last name first --}}
-          @if (auth()->user()->name_order == 'firstname_first')
+          @if (auth()->user()->getNameOrderForForms() == 'firstname')
 
           <dl class="form-group {{ $errors->has('first_name') ? ' errored' : '' }}">
             <dt><label for="first_name">{{ trans('people.people_add_firstname') }}</label></dt>
@@ -79,7 +79,7 @@
 
           <button class="btn btn-primary" name="save" type="submit">{{ trans('people.people_add_cta') }}</button>
           <button class="btn btn-secondary" name="save_and_add_another" type="submit">{{ trans('people.people_save_and_add_another_cta') }}</button>
-          <a href="/people" class="btn btn-secondary">{{ trans('app.cancel') }}</a>
+          <a href="{{ route('people.index') }}" class="btn btn-secondary">{{ trans('app.cancel') }}</a>
         </form>
       </div>
     </div>

@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Settings;
 
-use Validator;
-use App\ContactFieldType;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Traits\JsonRespondController;
+use App\Models\Contact\ContactFieldType;
+use Illuminate\Support\Facades\Validator;
 
 class PersonalizationController extends Controller
 {
+    use JsonRespondController;
+
     /**
      * Display the personalization page.
      * @return \Illuminate\Http\Response
@@ -40,41 +43,27 @@ class PersonalizationController extends Controller
             'protocol' => 'max:255|nullable',
         ])->validate();
 
-        $contactFieldType = auth()->user()->account->contactFieldTypes()->create(
+        return auth()->user()->account->contactFieldTypes()->create(
             $request->only([
                 'name',
                 'protocol',
             ])
             + [
                 'fontawesome_icon' => $request->get('icon'),
-                'account_id' => auth()->user()->account->id,
+                'account_id' => auth()->user()->account_id,
             ]
         );
-
-        return $contactFieldType;
     }
 
     /**
      * Edit a newly created resource in storage.
      *
-     * @param ContactFieldTypeRequest $request
-     * @param string $contactFieldTypeId
+     * @param Request $request
+     * @param ContactFieldType $contactFieldType
      * @return \Illuminate\Http\Response
      */
-    public function editContactFieldType(Request $request, $contactFieldTypeId)
+    public function editContactFieldType(Request $request, ContactFieldType $contactFieldType)
     {
-        try {
-            $contactFieldType = ContactFieldType::where('account_id', auth()->user()->account_id)
-                ->where('id', $contactFieldTypeId)
-                ->firstOrFail();
-        } catch (ModelNotFoundException $e) {
-            return $this->respond([
-                'errors' => [
-                    'message' => trans('app.error_unauthorized'),
-                ],
-            ]);
-        }
-
         Validator::make($request->all(), [
             'name' => 'required|max:255',
             'icon' => 'max:255|nullable',
@@ -94,36 +83,25 @@ class PersonalizationController extends Controller
         return $contactFieldType;
     }
 
-    public function destroyContactFieldType(Request $request, $contactFieldTypeId)
+    /**
+     * Destroy the contact field type.
+     */
+    public function destroyContactFieldType(Request $request, ContactFieldType $contactFieldType)
     {
-        try {
-            $contactFieldType = ContactFieldType::where('account_id', auth()->user()->account_id)
-                ->where('id', $contactFieldTypeId)
-                ->firstOrFail();
-        } catch (ModelNotFoundException $e) {
-            return $this->respond([
-                'errors' => [
-                    'message' => trans('app.error_unauthorized'),
-                ],
-            ]);
-        }
-
-        if ($contactFieldType->delible == false) {
-            return $this->respond([
-                'errors' => [
-                    'message' => trans('app.error_unauthorized'),
-                ],
-            ]);
+        if (! $contactFieldType->delible) {
+            return $this->respondUnauthorized();
         }
 
         // find all the contact fields that have this contact field types
         $contactFields = auth()->user()->account->contactFields
-                                ->where('contact_field_type_id', $contactFieldTypeId);
+                                ->where('contact_field_type_id', $contactFieldType->id);
 
         foreach ($contactFields as $contactField) {
             $contactField->delete();
         }
 
         $contactFieldType->delete();
+
+        return $this->respondObjectDeleted($contactFieldType->id);
     }
 }

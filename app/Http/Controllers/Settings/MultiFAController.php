@@ -2,22 +2,28 @@
 
 namespace App\Http\Controllers\Settings;
 
-use Google2FA;
 use Illuminate\Http\Request;
+use PragmaRX\Google2FA\Google2FA;
+use Lahaxearnaud\U2f\Models\U2fKey;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use App\Traits\JsonRespondController;
+use Illuminate\Support\Facades\Event;
+use Lahaxearnaud\U2f\U2fFacade as U2f;
 use Illuminate\Foundation\Auth\RedirectsUsers;
 use PragmaRX\Google2FALaravel\Support\Authenticator;
+use App\Http\Resources\Settings\U2fKey\U2fKey as U2fKeyResource;
 
 class MultiFAController extends Controller
 {
-    use RedirectsUsers;
+    use RedirectsUsers, JsonRespondController;
 
     protected $redirectTo = '/settings/security';
 
     /**
      * Session var name to store secret code.
      */
-    private const SESSION_TFA_SECRET = '2FA_secret';
+    private $SESSION_TFA_SECRET = '2FA_secret';
 
     /**
      * Create a new authentication controller instance.
@@ -41,16 +47,16 @@ class MultiFAController extends Controller
         $user = $request->user();
 
         //generate image for QR barcode
-        $imageDataUri = Google2FA::getQRCodeInline(
+        $imageDataUri = app('pragmarx.google2fa')->getQRCodeInline(
             $request->getHttpHost(),
             $user->email,
             $secret,
             200
         );
 
-        $request->session()->put(self::SESSION_TFA_SECRET, $secret);
+        $request->session()->put($this->SESSION_TFA_SECRET, $secret);
 
-        return view('settings.security.2fa-enable', ['image' => $imageDataUri, 'secret' => $secret]);
+        return response()->json(['image' => $imageDataUri, 'secret' => $secret]);
     }
 
     /**
@@ -59,33 +65,35 @@ class MultiFAController extends Controller
      */
     public function validateTwoFactor(Request $request)
     {
+        //get user
+        $user = $request->user();
+
+        if (! is_null($user->google2fa_secret)) {
+            return response()->json(['error' => trans('settings.2fa_enable_error_already_set')]);
+        }
+
         $this->validate($request, [
             'one_time_password' => 'required',
         ]);
 
         //retrieve secret
-        $secret = $request->session()->pull(self::SESSION_TFA_SECRET);
+        $secret = $request->session()->pull($this->SESSION_TFA_SECRET);
 
         $authenticator = app(Authenticator::class)->boot($request);
 
         if ($authenticator->verifyGoogle2FA($secret, $request['one_time_password'])) {
-            //get user
-            $user = $request->user();
-
             //encrypt and then save secret
             $user->google2fa_secret = $secret;
             $user->save();
 
             $authenticator->login();
 
-            return redirect($this->redirectPath())
-                ->with('status', trans('settings.2fa_enable_success'));
+            return response()->json(['success' => true]);
         }
 
         $authenticator->logout();
 
-        return redirect($this->redirectPath())
-            ->withErrors(trans('settings.2fa_enable_error'));
+        return response()->json(['success' => false]);
     }
 
     /**
@@ -122,12 +130,10 @@ class MultiFAController extends Controller
 
             $authenticator->logout();
 
-            return redirect($this->redirectPath())
-                ->with('status', trans('settings.2fa_disable_success'));
+            return response()->json(['success' => true]);
         }
 
-        return redirect($this->redirectPath())
-            ->withErrors(trans('settings.2fa_disable_error'));
+        return response()->json(['success' => false]);
     }
 
     /**
@@ -140,5 +146,56 @@ class MultiFAController extends Controller
         $google2fa = app('pragmarx.google2fa');
 
         return $google2fa->generateSecretKey(32);
+    }
+
+    /**
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function u2fRegisterData(Request $request)
+    {
+        list($req, $sigs) = app('u2f')->getRegisterData($request->user());
+        session(['u2f.registerData' => $req]);
+
+        return $this->respond([
+            'currentKeys' => $sigs,
+            'registerData' => $req,
+        ]);
+    }
+
+    public function u2fRegister(Request $request)
+    {
+        try {
+            $key = U2f::doRegister(Auth::user(), session('u2f.registerData'), json_decode($request->input('register')));
+            if ($request->filled('name')) {
+                $key->name = $request->input('name');
+                $key->save();
+            }
+
+            Event::fire('u2f.register', ['u2fKey' => $key, 'user' => Auth::user()]);
+            session()->forget('u2f.registerData');
+
+            session([config('u2f.sessionU2fName') => true]);
+
+            return new U2fKeyResource($key);
+        } catch (\Exception $e) {
+            return $this->respondWithError($e->getMessage());
+        }
+    }
+
+    /**
+     * Remove an existing security key.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\Response
+     */
+    public function u2fRemove(Request $request, int $u2fKeyId)
+    {
+        $u2fKey = U2fKey::where('user_id', auth()->id())
+            ->findOrFail($u2fKeyId);
+
+        $u2fKey->delete();
+
+        return $this->respondObjectDeleted($u2fKeyId);
     }
 }

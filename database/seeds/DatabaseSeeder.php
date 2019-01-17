@@ -11,21 +11,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
-        if (env('APP_ENV') == 'local') {
-            $this->call(ActivityTypesTableSeeder::class);
-            $this->call(CountriesSeederTable::class);
-            $this->call(FakeUserTableSeeder::class);
-        }
-
-        if (env('APP_ENV') == 'testing') {
-            $this->call(ActivityTypesTableSeeder::class);
-            $this->call(CountriesSeederTable::class);
-            $this->call(FakeUserTableSeeder::class);
-        }
-
-        if (env('APP_ENV') == 'production') {
-            $this->call(ActivityTypesTableSeeder::class);
-            $this->call(CountriesSeederTable::class);
+        switch (\Illuminate\Support\Facades\App::environment()) {
+            case 'local':
+                $this->call(FakeUserTableSeeder::class);
+                $this->call(CurrenciesTableSeeder::class);
+            break;
+            case 'testing':
+                $this->call(FakeUserTableSeeder::class);
+                $this->call(CurrenciesTableSeeder::class);
+            break;
+            case 'production':
+                $this->call(CurrenciesTableSeeder::class);
+            break;
         }
     }
 }

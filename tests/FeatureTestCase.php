@@ -2,23 +2,27 @@
 
 namespace Tests;
 
+use Tests\Traits\SignIn;
+use Illuminate\Foundation\Testing\TestResponse;
+
 class FeatureTestCase extends TestCase
 {
+    use SignIn;
+
     /**
-     * Create a user and sign in as that user. If a user
-     * object is passed, then sign in as that user.
+     * Test that the response contains a not found notification.
      *
-     * @param null $user
-     * @return mixed
+     * @param TestResponse $response
      */
-    public function signIn($user = null)
+    public function expectNotFound(TestResponse $response)
     {
-        if (is_null($user)) {
-            $user = factory('App\User')->create();
-        }
+        $response->assertStatus(404);
 
-        $this->be($user);
-
-        return $user;
+        $response->assertJson([
+            'error' => [
+                'message' => 'The resource has not been found',
+                'error_code' => 31,
+            ],
+        ]);
     }
 }

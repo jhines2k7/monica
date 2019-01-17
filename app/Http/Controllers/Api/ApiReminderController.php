@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
-use Validator;
-use App\Contact;
-use App\Reminder;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use App\Models\Contact\Contact;
+use App\Models\Contact\Reminder;
 use Illuminate\Database\QueryException;
+use Illuminate\Validation\ValidationException;
+use App\Services\Contact\Reminder\CreateReminder;
+use App\Services\Contact\Reminder\UpdateReminder;
+use App\Services\Contact\Reminder\DestroyReminder;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Resources\Reminder\Reminder as ReminderResource;
 
@@ -20,8 +22,13 @@ class ApiReminderController extends ApiController
      */
     public function index(Request $request)
     {
-        $reminders = auth()->user()->account->reminders()
-                                ->paginate($this->getLimitPerPage());
+        try {
+            $reminders = auth()->user()->account->reminders()
+                ->orderBy($this->sort, $this->sortDirection)
+                ->paginate($this->getLimitPerPage());
+        } catch (QueryException $e) {
+            return $this->respondInvalidQuery();
+        }
 
         return ReminderResource::collection($reminders);
     }
@@ -51,46 +58,21 @@ class ApiReminderController extends ApiController
      */
     public function store(Request $request)
     {
-        // Validates basic fields to create the entry
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|max:100000',
-            'description' => 'max:1000000',
-            'next_expected_date' => 'required|date',
-            'frequency_type' => [
-                'required',
-                Rule::in(['one_time', 'day', 'month', 'year']),
-            ],
-            'frequency_number' => 'integer',
-            'contact_id' => 'required|integer',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->setErrorCode(32)
-                        ->respondWithError($validator->errors()->all());
-        }
-
-        $date = \Carbon\Carbon::createFromFormat('Y-m-d', $request->get('next_expected_date'), auth()->user()->timezone);
-        if ($date->isPast()) {
-            return $this->setErrorCode(38)
-                        ->respondWithError('Date should be in the future');
-        }
-
         try {
-            $contact = Contact::where('account_id', auth()->user()->account_id)
-                ->where('id', $request->input('contact_id'))
-                ->firstOrFail();
+            $reminder = (new CreateReminder)->execute(
+                $request->all()
+                    +
+                    [
+                    'account_id' => auth()->user()->account->id,
+                ]
+            );
         } catch (ModelNotFoundException $e) {
             return $this->respondNotFound();
-        }
-
-        try {
-            $reminder = Reminder::create($request->all());
+        } catch (ValidationException $e) {
+            return $this->respondValidatorFailed($e->validator);
         } catch (QueryException $e) {
-            return $this->respondNotTheRightParameters();
+            return $this->respondInvalidQuery();
         }
-
-        $reminder->account_id = auth()->user()->account->id;
-        $reminder->save();
 
         return new ReminderResource($reminder);
     }
@@ -104,49 +86,20 @@ class ApiReminderController extends ApiController
     public function update(Request $request, $reminderId)
     {
         try {
-            $reminder = Reminder::where('account_id', auth()->user()->account_id)
-                ->where('id', $reminderId)
-                ->firstOrFail();
+            $reminder = (new UpdateReminder)->execute(
+                $request->all()
+                    +
+                    [
+                    'account_id' => auth()->user()->account->id,
+                    'reminder_id' => $reminderId,
+                ]
+            );
         } catch (ModelNotFoundException $e) {
             return $this->respondNotFound();
-        }
-
-        // Validates basic fields to create the entry
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|max:100000',
-            'description' => 'required|max:1000000',
-            'next_expected_date' => 'required|date',
-            'frequency_type' => [
-                'required',
-                Rule::in(['one_time', 'day', 'month', 'year']),
-            ],
-            'frequency_number' => 'integer',
-            'contact_id' => 'required|integer',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->setErrorCode(32)
-                        ->respondWithError($validator->errors()->all());
-        }
-
-        $date = \Carbon\Carbon::createFromFormat('Y-m-d', $request->get('next_expected_date'), auth()->user()->timezone);
-        if ($date->isPast()) {
-            return $this->setErrorCode(38)
-                        ->respondWithError('Date should be in the future');
-        }
-
-        try {
-            $contact = Contact::where('account_id', auth()->user()->account_id)
-                ->where('id', $request->input('contact_id'))
-                ->firstOrFail();
-        } catch (ModelNotFoundException $e) {
-            return $this->respondNotFound();
-        }
-
-        try {
-            $reminder->update($request->all());
+        } catch (ValidationException $e) {
+            return $this->respondValidatorFailed($e->validator);
         } catch (QueryException $e) {
-            return $this->respondNotTheRightParameters();
+            return $this->respondInvalidQuery();
         }
 
         return new ReminderResource($reminder);
@@ -160,20 +113,23 @@ class ApiReminderController extends ApiController
     public function destroy(Request $request, $reminderId)
     {
         try {
-            $reminder = Reminder::where('account_id', auth()->user()->account_id)
-                ->where('id', $reminderId)
-                ->firstOrFail();
+            (new DestroyReminder)->execute([
+                'account_id' => auth()->user()->account->id,
+                'reminder_id' => $reminderId,
+            ]);
         } catch (ModelNotFoundException $e) {
             return $this->respondNotFound();
+        } catch (ValidationException $e) {
+            return $this->respondValidatorFailed($e->validator);
+        } catch (QueryException $e) {
+            return $this->respondInvalidQuery();
         }
 
-        $reminder->delete();
-
-        return $this->respondObjectDeleted($reminder->id);
+        return $this->respondObjectDeleted((int) $reminderId);
     }
 
     /**
-     * Get the list of calls for the given contact.
+     * Get the list of reminders for the given contact.
      *
      * @return \Illuminate\Http\Response
      */
@@ -188,6 +144,7 @@ class ApiReminderController extends ApiController
         }
 
         $reminders = $contact->reminders()
+                ->orderBy($this->sort, $this->sortDirection)
                 ->paginate($this->getLimitPerPage());
 
         return ReminderResource::collection($reminders);

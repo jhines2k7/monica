@@ -2,9 +2,15 @@
 
 namespace App\Console\Commands;
 
-use App\User;
-use App\Contact;
+use App\Models\User\User;
+use App\Models\Contact\Gender;
+use App\Models\Contact\Address;
+use App\Models\Contact\Contact;
 use Illuminate\Console\Command;
+use App\Models\Contact\ContactField;
+use App\Models\Contact\ContactFieldType;
+use App\Services\Contact\Address\CreateAddress;
+use App\Services\Contact\Reminder\CreateReminder;
 
 class ImportCSV extends Command
 {
@@ -23,14 +29,18 @@ class ImportCSV extends Command
     protected $description = 'Imports CSV in Google format to user account';
 
     /**
-     * Create a new command instance.
+     * The contact field email object.
      *
-     * @return void
+     * @var array
      */
-    public function __construct()
-    {
-        parent::__construct();
-    }
+    public $contactFieldEmailId;
+
+    /**
+     * The contact field phone object.
+     *
+     * @var array
+     */
+    public $contactFieldPhoneId;
 
     /**
      * Execute the console command.
@@ -61,83 +71,175 @@ class ImportCSV extends Command
 
         $this->info("Importing CSV file $file to user {$user->id}");
 
-        $row = 0;
+        // create special gender for this import
+        // we don't know which gender all the contacts are, so we need to create a special status for them, as we
+        // can't guess whether they are men, women or else.
+        $gender = Gender::where('name', 'vCard')->first();
+        if (! $gender) {
+            $gender = new Gender;
+            $gender->account_id = $user->account_id;
+            $gender->name = 'vCard';
+            $gender->save();
+        }
+
+        $first = true;
         $imported = 0;
         if (($handle = fopen($file, 'r')) !== false) {
-            while (($data = fgetcsv($handle)) !== false) {
-                $row++;
+            try {
+                while (($data = fgetcsv($handle)) !== false) {
+                    // don't import the columns
+                    if ($first) {
+                        $first = false;
+                        continue;
+                    }
 
-                // don't import the columns
-                if ($row == 1) {
-                    continue;
+                    // if first & last name do not exist skip row
+                    if (empty($data[1]) && empty($data[3])) {
+                        continue;
+                    }
+
+                    $this->csvToContact($data, $user->account_id, $gender->id);
+
+                    $imported++;
                 }
-
-                $contact = new Contact();
-                $contact->account_id = $user->id;
-
-                // if first & last name do not exist skip row
-                if (empty($data[1]) && empty($data[3])) {
-                    continue;
-                }
-
-                if (! empty($data[1])) {
-                    $contact->first_name = $data[1];    // Given Name
-                }
-
-                if (! empty($data[2])) {
-                    $contact->middle_name = $data[2];   // Additional Name
-                }
-
-                if (! empty($data[3])) {
-                    $contact->last_name = $data[3];     // Family Name
-                }
-
-                if (! empty($data[28])) {
-                    $contact->email = $data[28];        // Email 1 Value
-                }
-
-                if (! empty($data[42])) {
-                    $contact->phone_number = $data[42]; // Phone 1 Value
-                }
-
-                if (! empty($data[49])) {
-                    $contact->street = $data[49];       // address 1 street
-                }
-
-                if (! empty($data[50])) {
-                    $contact->city = $data[50];         // address 1 city
-                }
-                if (! empty($data[52])) {
-                    $contact->province = $data[52];     // address 1 region (state)
-                }
-
-                if (! empty($data[53])) {
-                    $contact->postal_code = $data[53];  // address 1 postal code (zip) 53
-                }
-                if (! empty($data[66])) {
-                    $contact->job = $data[66];          // organization 1 name 66
-                }
-
-                // can't have empty email
-                if (empty($contact->email)) {
-                    $contact->email = null;
-                }
-
-                $contact->save();
-                $contact->setAvatarColor();
-
-                if (! empty($data[14])) {
-                    $birthdate = date('Y-m-d', strtotime($data[14]));
-
-                    $specialDate = $contact->setSpecialDate('birthdate', $birthdate->format('Y'), $birthdate->format('m'), $birthdate->format('d'));
-                    $newReminder = $specialDate->setReminder('year', 1, trans('people.people_add_birthday_reminder', ['name' => $contact->first_name]));
-                }
-
-                $imported++;
+            } finally {
+                fclose($handle);
             }
-            fclose($handle);
         }
 
         $this->info("Imported {$imported} Contacts");
+    }
+
+    /**
+     * Create contact.
+     */
+    private function csvToContact($data, $account_id, $gender_id)
+    {
+        $contact = new Contact();
+        $contact->account_id = $account_id;
+        $contact->gender_id = $gender_id;
+
+        if (! empty($data[1])) {
+            $contact->first_name = $data[1];    // Given Name
+        }
+
+        if (! empty($data[2])) {
+            $contact->middle_name = $data[2];   // Additional Name
+        }
+
+        if (! empty($data[3])) {
+            $contact->last_name = $data[3];     // Family Name
+        }
+
+        $street = null;
+        if (! empty($data[49])) {
+            $street = $data[49];       // address 1 street
+        }
+
+        $city = null;
+        if (! empty($data[50])) {
+            $city = $data[50];         // address 1 city
+        }
+
+        $province = null;
+        if (! empty($data[52])) {
+            $province = $data[52];     // address 1 region (state)
+        }
+
+        $postalCode = null;
+        if (! empty($data[53])) {
+            $postalCode = $data[53];  // address 1 postal code (zip) 53
+        }
+
+        if (! empty($data[66])) {
+            $contact->job = $data[66];          // organization 1 name 66
+        }
+
+        $contact->setAvatarColor();
+        $contact->save();
+
+        if (! empty($data[28])) {
+            // Email 1 Value
+            ContactField::firstOrCreate([
+                'account_id' => $contact->account_id,
+                'contact_id' => $contact->id,
+                'data' => $data[28],
+                'contact_field_type_id' => $this->contactFieldEmailId(),
+            ]);
+        }
+
+        if ($postalCode || $province || $street || $city) {
+            $request = [
+                'account_id' => $contact->account_id,
+                'contact_id' => $contact->id,
+                'street' => $street,
+                'city' => $city,
+                'province' => $province,
+                'postal_code' => $postalCode,
+            ];
+
+            (new CreateAddress)->execute($request);
+        }
+
+        if (! empty($data[42])) {
+            // Phone 1 Value
+            ContactField::firstOrCreate([
+                'account_id' => $contact->account_id,
+                'contact_id' => $contact->id,
+                'data' => $data[42],
+                'contact_field_type_id' => $this->contactFieldPhoneId(),
+            ]);
+        }
+
+        if (! empty($data[14])) {
+            $birthdate = new \DateTime(strtotime($data[14]));
+
+            $specialDate = $contact->setSpecialDate('birthdate', $birthdate->format('Y'), $birthdate->format('m'), $birthdate->format('d'));
+
+            (new CreateReminder)->execute([
+                'account_id' => $contact->account_id,
+                'contact_id' => $contact->id,
+                'initial_date' => $specialDate->date->toDateString(),
+                'frequency_type' => 'year',
+                'frequency_number' => 1,
+                'title' => trans(
+                    'people.people_add_birthday_reminder',
+                    ['name' => $contact->first_name]
+                ),
+                'delible' => false,
+            ]);
+        }
+
+        $contact->updateGravatar();
+    }
+
+    /**
+     * Get the default contact field email id for the account.
+     *
+     * @return int
+     */
+    private function contactFieldEmailId()
+    {
+        if (! $this->contactFieldEmailId) {
+            $contactFieldType = ContactFieldType::where('type', 'email')->first();
+            $this->contactFieldEmailId = $contactFieldType->id;
+        }
+
+        return $this->contactFieldEmailId;
+    }
+
+    /**
+     * Get the default contact field phone id for the account.
+     *
+     * @return void
+     */
+    private function contactFieldPhoneId()
+    {
+        if (! $this->contactFieldPhoneId) {
+            $contactFieldType = ContactFieldType::where('type', 'phone')->first();
+            $this->contactFieldPhoneId = $contactFieldType->id;
+        }
+
+        return $this->contactFieldPhoneId;
     }
 }

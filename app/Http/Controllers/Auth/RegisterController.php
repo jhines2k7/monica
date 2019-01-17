@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Auth;
 
-use Auth;
-use App\User;
-use Validator;
-use App\Account;
-use Carbon\Carbon;
+use App\Models\User\User;
+use Illuminate\Http\Request;
+use App\Helpers\LocaleHelper;
+use App\Helpers\RequestHelper;
 use App\Jobs\SendNewUserAlert;
+use App\Models\Account\Account;
+use App\Helpers\CollectionHelper;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Foundation\Auth\RegistersUsers;
 
 class RegisterController extends Controller
@@ -48,13 +51,16 @@ class RegisterController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function showRegistrationForm()
+    public function showRegistrationForm(Request $request)
     {
-        if (config('monica.disable_signup') == 'true') {
+        $first = ! Account::hasAny();
+        if (config('monica.disable_signup') == 'true' && ! $first) {
             abort(403, trans('auth.signup_disabled'));
         }
 
-        return view('auth.register');
+        return view('auth.register')
+            ->withFirst($first)
+            ->withLocales(CollectionHelper::sortByCollator(LocaleHelper::getLocaleList(), 'lang'));
     }
 
     /**
@@ -70,38 +76,54 @@ class RegisterController extends Controller
             'first_name' => 'required|max:255',
             'email' => 'required|email|max:255|unique:users',
             'password' => 'required|min:6|confirmed',
+            'policy' => 'required',
         ]);
     }
 
     /**
      * Create a new user instance after a valid registration.
      *
-     * @param  array  $data
+     * @param  array
      * @return User
      */
     protected function create(array $data)
     {
-        // create a new account
-        $account = new Account;
-        $account->api_key = str_random(30);
-        $account->created_at = Carbon::now();
-        $account->save();
+        $first = ! Account::hasAny();
+        $account = Account::createDefault(
+            $data['first_name'],
+            $data['last_name'],
+            $data['email'],
+            $data['password'],
+            RequestHelper::ip(),
+            $data['lang']
+        );
+        $user = $account->users()->first();
 
-        $user = new User;
-        $user->first_name = $data['first_name'];
-        $user->last_name = $data['last_name'];
-        $user->email = $data['email'];
-        $user->password = bcrypt($data['password']);
-        $user->timezone = config('app.timezone');
-        $user->created_at = Carbon::now();
-        $user->account_id = $account->id;
-        $user->save();
-
-        $account->populateContactFieldTypeTable();
-
-        // send me an alert
-        dispatch(new SendNewUserAlert($user));
+        if (! $first) {
+            // send me an alert
+            dispatch(new SendNewUserAlert($user));
+        }
 
         return $user;
+    }
+
+    /**
+     * The user has been registered.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  mixed  $user
+     * @return mixed
+     */
+    protected function registered(Request $request, $user)
+    {
+        $first = Account::count() == 1;
+        if (! config('monica.signup_double_optin') || $first) {
+            // if signup_double_optin is disabled, skip the confirm email part
+            $user->markEmailAsVerified();
+
+            $this->guard()->login($user);
+
+            return redirect()->route('login');
+        }
     }
 }

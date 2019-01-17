@@ -2,41 +2,26 @@
 
 namespace Tests;
 
-use Faker\Factory;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
 
-    public $faker;
-
     /**
-     * TestCase constructor.
-     */
-    public function __construct($name = null, array $data = [], $dataName = '')
-    {
-        parent::__construct($name, $data, $dataName);
-
-        // Makes a Faker Factory available to all tests.
-        $this->faker = Factory::create();
-    }
-
-    /**
-     * Create a user and sign in as that user. If a user
-     * object is passed, then sign in as that user.
+     * Call protected/private method of a class.
      *
-     * @param null $user
+     * @param  object &$object
+     * @param  string $methodName
+     * @param  array  $parameters
      * @return mixed
      */
-    public function signIn($user = null)
+    public function invokePrivateMethod(&$object, $methodName, array $parameters = [])
     {
-        if (is_null($user)) {
-            $user = factory('App\User')->create();
-        }
+        $reflection = new \ReflectionClass(get_class($object));
+        $method = $reflection->getMethod($methodName);
+        $method->setAccessible(true);
 
-        $this->be($user);
-
-        return $user;
+        return $method->invokeArgs($object, $parameters);
     }
 }

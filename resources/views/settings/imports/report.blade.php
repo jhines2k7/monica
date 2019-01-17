@@ -10,13 +10,13 @@
           <div class="col-xs-12">
             <ul class="horizontal">
               <li>
-                  <a href="/dashboard">{{ trans('app.breadcrumb_dashboard') }}</a>
+                  <a href="{{ route('dashboard.index') }}">{{ trans('app.breadcrumb_dashboard') }}</a>
                 </li>
                 <li>
-                  <a href="/settings">{{ trans('app.breadcrumb_settings') }}</a>
+                  <a href="{{ route('settings.index') }}">{{ trans('app.breadcrumb_settings') }}</a>
                 </li>
                 <li>
-                <a href="/settings/import">{{ trans('app.breadcrumb_settings_import') }}</a>
+                  <a href="{{ route('settings.import') }}">{{ trans('app.breadcrumb_settings_import') }}</a>
                 </li>
                 <li>
                   {{ trans('app.breadcrumb_settings_import_report') }}
@@ -45,7 +45,7 @@
 
             <ul class="table">
 
-              @foreach ($importJob->importjobreports as $importJobReport)
+              @foreach ($importJob->importJobReports as $importJobReport)
               <li class="table-row">
                 <div class="table-cell status">
                   @if ($importJobReport->skipped == 0)
@@ -59,6 +59,10 @@
                 </div>
                 <div class="table-cell reason">
                   @if (! is_null($importJobReport->skip_reason))
+                  {{--
+                    settings.import_vcard_contact_exist
+                    settings.import_vcard_contact_no_firstname
+                    --}}
                   {{ trans('settings.'.$importJobReport->skip_reason) }}
                   @endif
                 </div>

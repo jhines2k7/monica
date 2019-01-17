@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers\Contacts;
 
-use App\Debt;
-use App\Contact;
+use App\Models\Contact\Debt;
+use App\Helpers\AvatarHelper;
+use App\Models\Contact\Contact;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\People\DebtRequest;
 
@@ -31,6 +32,7 @@ class DebtController extends Controller
     {
         return view('people.debt.add')
             ->withContact($contact)
+            ->withAvatar(AvatarHelper::get($contact, 87))
             ->withDebt(new Debt);
     }
 
@@ -43,7 +45,7 @@ class DebtController extends Controller
      */
     public function store(DebtRequest $request, Contact $contact)
     {
-        $debt = $contact->debts()->create(
+        $contact->debts()->create(
             $request->only([
                 'in_debt',
                 'amount',
@@ -55,9 +57,7 @@ class DebtController extends Controller
             ]
         );
 
-        $contact->logEvent('debt', $debt->id, 'create');
-
-        return redirect('/people/'.$contact->id)
+        return redirect()->route('people.show', $contact)
             ->with('success', trans('people.debt_add_success'));
     }
 
@@ -84,6 +84,7 @@ class DebtController extends Controller
     {
         return view('people.debt.edit')
             ->withContact($contact)
+            ->withAvatar(AvatarHelper::get($contact, 87))
             ->withDebt($debt);
     }
 
@@ -109,9 +110,7 @@ class DebtController extends Controller
             ]
         );
 
-        $contact->logEvent('debt', $debt->id, 'update');
-
-        return redirect('/people/'.$contact->id)
+        return redirect()->route('people.show', $contact)
             ->with('success', trans('people.debt_edit_success'));
     }
 
@@ -126,9 +125,7 @@ class DebtController extends Controller
     {
         $debt->delete();
 
-        $contact->events()->forObject($debt)->get()->each->delete();
-
-        return redirect('/people/'.$contact->id)
+        return redirect()->route('people.show', $contact)
             ->with('success', trans('people.debt_delete_success'));
     }
 }

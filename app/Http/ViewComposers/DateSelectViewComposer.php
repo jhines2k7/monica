@@ -2,8 +2,8 @@
 
 namespace App\Http\ViewComposers;
 
-use Carbon\Carbon;
 use Illuminate\View\View;
+use App\Helpers\DateHelper;
 
 class DateSelectViewComposer
 {
@@ -20,24 +20,10 @@ class DateSelectViewComposer
     public function compose(View $view)
     {
         // Months
-        Carbon::setLocale(auth()->user()->locale);
-        $months = [];
-        $currentDate = Carbon::now();
-        $currentDate->day = 1;
-
-        for ($month = 1; $month < 13; $month++) {
-            $currentDate->month = $month;
-            array_push($months, $currentDate->formatLocalized('%B'));
-        }
+        $months = DateHelper::getListOfMonths();
 
         // Years
-        $years = [];
-        $maxYear = Carbon::now(auth()->user()->timezone)->year;
-        $minYear = Carbon::now(auth()->user()->timezone)->subYears(120)->format('Y');
-
-        for ($year = $maxYear; $year >= $minYear; $year--) {
-            array_push($years, $year);
-        }
+        $years = DateHelper::getListOfYears(120);
 
         $view->with([
             'months' => $months,

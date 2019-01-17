@@ -9,10 +9,10 @@ services:
       - 80:80
     env_file: .env
     volumes:
-      - ./persist/storage/app/public:/var/www/monica/storage/app/public
+      - ./persist/storage:/var/www/monica/storage
 
   mysql:
-    image: mysql
+    image: mysql:5.7
     environment:
       - MYSQL_ROOT_PASSWORD=super-secret-secret
       - MYSQL_DATABASE=monica

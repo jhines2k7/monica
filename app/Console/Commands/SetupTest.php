@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Console\Application;
 
 class SetupTest extends Command
 {
@@ -22,16 +23,6 @@ class SetupTest extends Command
     protected $description = 'Create the test environment with optional fake data for testing purposes.';
 
     /**
-     * Create a new command instance.
-     *
-     * @return void
-     */
-    public function __construct()
-    {
-        parent::__construct();
-    }
-
-    /**
      * Execute the console command.
      *
      * @return mixed
@@ -42,22 +33,12 @@ class SetupTest extends Command
             return;
         }
 
-        $this->callSilent('migrate:fresh');
-        $this->info('✓ Performed migrations');
+        $this->artisan('✓ Performing migrations', 'migrate:fresh');
 
-        $this->call('db:seed', ['--class' => 'ActivityTypesTableSeeder']);
-        $this->info('✓ Filled the Activity Types table');
-
-        $this->call('db:seed', ['--class' => 'CountriesSeederTable']);
-        $this->info('✓ Filled the Countries table');
-
-        $this->callSilent('storage:link');
-        $this->info('✓ Symlinked the storage folder for the avatars');
+        $this->artisan('✓ Symlink the storage folder', 'storage:link');
 
         if (! $this->option('skipSeed')) {
-            $this->call('db:seed', ['--class' => 'FakeContentTableSeeder']);
-            $this->info('');
-            $this->info('✓ Filled database with fake data');
+            $this->artisan('✓ Filling  database with fake data', 'db:seed', ['--class' => 'FakeContentTableSeeder']);
         }
 
         $this->line('');
@@ -73,5 +54,22 @@ class SetupTest extends Command
         $this->line('-----------------------------');
 
         $this->info('Setup is done. Have fun.');
+    }
+
+    public function exec($message, $command)
+    {
+        $this->info($message);
+        $this->line($command);
+        exec($command, $output);
+        $this->line(implode('\n', $output));
+        $this->line('');
+    }
+
+    public function artisan($message, $command, array $arguments = [])
+    {
+        $this->info($message);
+        $this->line(Application::formatCommandString($command));
+        $this->callSilent($command, $arguments);
+        $this->line('');
     }
 }

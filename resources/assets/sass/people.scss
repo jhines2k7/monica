@@ -1,3 +1,13 @@
+.avatars {
+  a {
+    text-decoration: none;
+
+    &:hover {
+      background-color: transparent;
+    }
+  }
+}
+
 .people-list {
   .breadcrumb {
     border-bottom: 1px solid #eee;
@@ -17,7 +27,11 @@
 
     li {
       margin-bottom: 7px;
-      padding-left: 15px;
+      @if $htmldir == ltr {
+        padding-left: 15px;
+      } @else {
+        padding-right: 15px;
+      }
       position: relative;
 
       &.selected::before {
@@ -28,7 +42,11 @@
       }
 
       .number-contacts-per-tag {
-        float: right;
+        @if $htmldir == ltr {
+          float: right;
+        } @else {
+          float: left;
+        }
       }
     }
   }
@@ -46,7 +64,11 @@
 
     a {
       position: absolute;
-      right: 10px;
+      @if $htmldir == ltr {
+        right: 10px;
+      } @else {
+        left: 10px;
+      }
     }
   }
 
@@ -66,7 +88,11 @@
       .options {
         display: inline;
         position: absolute;
-        right: 10px;
+        @if $htmldir == ltr {
+          right: 10px;
+        } @else {
+          left: 10px;
+        }
 
         .dropdown-btn {
           &:after {
@@ -108,10 +134,14 @@
       font-size: 15px;
       height: 43px;
       margin-right: 5px;
-      padding-left: 5px;
       padding-top: 10px;
       vertical-align: middle;
       width: 43px;
+      @if $htmldir == ltr {
+        padding-left: 5px;
+      } @else {
+        padding-right: 5px;
+      }
 
       &.one-letter {
         padding-left: 0;
@@ -127,6 +157,7 @@
     a {
       color: #333;
       text-decoration: none;
+      display: block;
 
       &:hover {
         background-color: transparent;
@@ -136,12 +167,16 @@
 
     .people-list-item-information {
       color: #999;
-      float: right;
       font-size: 12px;
       font-style: italic;
       position: relative;
       text-align: right;
       top: 16px;
+      @if $htmldir == ltr {
+        float: right;
+      } @else {
+        float: left;
+      }
     }
   }
 }
@@ -172,121 +207,10 @@
 }
 
 .people-show {
-  .pagehead {
-    background-color: #f9f9fb;
-    border-bottom: 1px solid #eee;
-    position: relative;
-    padding-bottom: 20px;
-
-    .people-profile-information {
-      margin-bottom: 10px;
-      position: relative;
-
-      .avatar {
-        background-color: #93521e;
-        border-radius: 3px;
-        color: #fff;
-        display: inline-block;
-        font-size: 30px;
-        height: 87px;
-        margin-right: 5px;
-        padding-left: 5px;
-        padding-top: 21px;
-        position: absolute;
-        width: 87px;
-
-        &.one-letter {
-          padding-left: 0;
-          text-align: center;
-        }
-      }
-
-      img {
-        border-radius: 3px;
-        position: absolute;
-      }
-
-      h2 {
-        display: block;
-        font-size: 24px;
-        font-weight: 300;
-        margin-bottom: 0;
-        padding-left: 100px;
-        white-space: nowrap;
-        text-overflow: ellipsis;
-        overflow: hidden;
-        width: calc(100% - 245px);
-        margin-right: -9999px;
-      }
-
-      @media (max-width: 480px) {
-        h2 {
-          width: 100%;
-        }
-      }
-
-      .profile-detail-summary {
-        padding-left: 100px;
-        margin-top: 3px;
-
-        li {
-          &:not(:last-child) {
-            margin-right: 10px;
-          }
-        }
-      }
-
-      #tagsForm {
-        padding-left: 100px;
-        position: relative;
-
-        #tags_tagsinput {
-          height: 40px!important;
-          min-height: 40px!important;
-          width: 370px!important;
-          display: inline-block;
-          overflow: hidden;
-        }
-
-        .tagsFormActions {
-          display: inline;
-          position: relative;
-          top: -17px;
-        }
-      }
-
-      .tags {
-        padding: 0;
-        padding-left: 100px;
-        list-style: none;
-        line-height: 20px;
-        margin: 0;
-        overflow: hidden;
-        margin-top: 8px;
-
-        li {
-          float: left;
-        }
-      }
-    }
-
-    .quick-actions {
-      position: absolute;
-      right: 0;
-      top: 14px;
-    }
-  }
-
   .main-content {
     background-color: #fff;
     padding-bottom: 20px;
     padding-top: 40px;
-
-    .delete-contact {
-      font-size: 12px;
-      margin-bottom: 30px;
-      text-align: center;
-    }
 
     .section-title {
       position: relative;
@@ -297,7 +221,11 @@
         font-weight: 400;
         margin-bottom: 20px;
         padding-bottom: 10px;
-        padding-left: 23px;
+        @if $htmldir == ltr {
+          padding-left: 23px;
+        } @else {
+          padding-right: 23px;
+        }
         padding-top: 10px;
         position: relative;
       }
@@ -513,8 +441,7 @@
   .reminders,
   .tasks,
   .debts,
-  .gifts,
-  .calls {
+  .gifts {
     .date {
       color: #777;
       font-size: 12px;
@@ -535,10 +462,14 @@
     .list-actions {
       position: relative;
       text-align: center;
-      width: 60px;
+      width: 90px;
 
-      a:first-child {
-        margin-right: 5px;
+      a:not(:last-child) {
+        @if $htmldir == ltr {
+          margin-right: 5px;
+        } @else {
+          margin-left: 5px;
+        }
       }
 
       a.edit {
@@ -577,40 +508,6 @@
       }
     }
   }
-
-  &.significantother,
-  &.kid {
-    .significant-other-blank-state {
-      text-align: center;
-
-      img {
-        margin-bottom: 20px;
-        margin-top: 10px;
-      }
-    }
-
-    .central-form {
-      .hint-reminder {
-        margin-top: 10px;
-
-        p {
-          margin-bottom: 0;
-        }
-      }
-
-      .real-contact-checkbox {
-        margin-bottom: 0;
-
-        input {
-          margin-right: 5px;
-        }
-
-        .help {
-          color: #999;
-        }
-      }
-    }
-  }
 }
 
 .create-people {
@@ -640,69 +537,6 @@
   }
 
   .people-show {
-    .pagehead {
-      .people-profile-information {
-        margin-bottom: 20px;
-        margin-top: 10px;
-
-        h2 {
-          padding-left: 80px;
-
-          span {
-            display: none;
-          }
-        }
-
-        #tagsForm {
-          display: block;
-          margin-top: 40px;
-          padding-left: 0;
-
-          #tags_tagsinput {
-            width: 100% !important;
-          }
-
-          .tagsFormActions {
-            display: block;
-            margin-top: 20px;
-          }
-        }
-
-        .profile-detail-summary {
-          padding-left: 0;
-          margin-top: 10px;
-
-          li {
-            display: block;
-            margin-right: 0;
-
-            &:not(:last-child) {
-              &::after {
-                content: '';
-                margin-left: 0;
-              }
-            }
-          }
-        }
-
-        .avatar {
-          height: 67px;
-          width: 67px;
-          padding-top: 11px;
-        }
-
-        .tags {
-          padding-left: 80px;
-        }
-      }
-
-      .edit-information {
-        position: relative;
-        width: 100%;
-        margin-bottom: 10px;
-      }
-    }
-
     .main-content {
       &.modal {
         margin-top: 0;

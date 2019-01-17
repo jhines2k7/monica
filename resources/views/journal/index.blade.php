@@ -9,10 +9,10 @@
       <div class="mw9 center pa2">
         <ul>
           <li class="di">
-            <a href="/dashboard">{{ trans('app.breadcrumb_dashboard') }}</a>
+            <a href="{{ route('dashboard.index') }}">{{ trans('app.breadcrumb_dashboard') }}</a>
           </li>
           <li class="di">
-            > {{ trans('app.breadcrumb_journal') }}
+            &gt; {{ trans('app.breadcrumb_journal') }}
           </li>
         </ul>
       </div>

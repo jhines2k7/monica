@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Task;
-use Validator;
-use App\Contact;
+use App\Models\Contact\Task;
 use Illuminate\Http\Request;
+use App\Models\Contact\Contact;
+use App\Services\Task\CreateTask;
+use App\Services\Task\UpdateTask;
+use App\Services\Task\DestroyTask;
 use Illuminate\Database\QueryException;
+use Illuminate\Validation\ValidationException;
 use App\Http\Resources\Task\Task as TaskResource;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
@@ -19,8 +22,13 @@ class ApiTaskController extends ApiController
      */
     public function index(Request $request)
     {
-        $tasks = auth()->user()->account->tasks()
-                                ->paginate($this->getLimitPerPage());
+        try {
+            $tasks = auth()->user()->account->tasks()
+                ->orderBy($this->sort, $this->sortDirection)
+                ->paginate($this->getLimitPerPage());
+        } catch (QueryException $e) {
+            return $this->respondInvalidQuery();
+        }
 
         return TaskResource::collection($tasks);
     }
@@ -33,7 +41,7 @@ class ApiTaskController extends ApiController
     public function show(Request $request, $taskId)
     {
         try {
-            $task = task::where('account_id', auth()->user()->account_id)
+            $task = Task::where('account_id', auth()->user()->account_id)
                 ->where('id', $taskId)
                 ->firstOrFail();
         } catch (ModelNotFoundException $e) {
@@ -50,36 +58,18 @@ class ApiTaskController extends ApiController
      */
     public function store(Request $request)
     {
-        // Validates basic fields to create the entry
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|max:255',
-            'description' => 'string|max:1000000',
-            'completed_at' => 'date',
-            'completed' => 'boolean|required',
-            'contact_id' => 'required|integer',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->setErrorCode(32)
-                        ->respondWithError($validator->errors()->all());
-        }
-
         try {
-            $contact = Contact::where('account_id', auth()->user()->account_id)
-                ->where('id', $request->input('contact_id'))
-                ->firstOrFail();
+            $task = (new CreateTask)->execute([
+                'account_id' => auth()->user()->account->id,
+                'contact_id' => ($request->get('contact_id') == '' ? null : $request->get('contact_id')),
+                'title' => $request->get('title'),
+                'description' => ($request->get('description') == '' ? null : $request->get('description')),
+            ]);
         } catch (ModelNotFoundException $e) {
             return $this->respondNotFound();
+        } catch (ValidationException $e) {
+            return $this->respondValidatorFailed($e->validator);
         }
-
-        try {
-            $task = Task::create($request->all());
-        } catch (QueryException $e) {
-            return $this->respondNotTheRightParameters();
-        }
-
-        $task->account_id = auth()->user()->account->id;
-        $task->save();
 
         return new TaskResource($task);
     }
@@ -93,39 +83,18 @@ class ApiTaskController extends ApiController
     public function update(Request $request, $taskId)
     {
         try {
-            $task = Task::where('account_id', auth()->user()->account_id)
-                ->where('id', $taskId)
-                ->firstOrFail();
+            $task = (new UpdateTask)->execute(
+                $request->all()
+                    +
+                    [
+                    'task_id' => $taskId,
+                    'account_id' => auth()->user()->account->id,
+                ]
+            );
         } catch (ModelNotFoundException $e) {
             return $this->respondNotFound();
-        }
-
-        // Validates basic fields to create the entry
-        $validator = Validator::make($request->all(), [
-            'title' => 'required|max:255',
-            'description' => 'string|max:1000000',
-            'completed_at' => 'date',
-            'completed' => 'boolean|required',
-            'contact_id' => 'required|integer',
-        ]);
-
-        if ($validator->fails()) {
-            return $this->setErrorCode(32)
-                        ->respondWithError($validator->errors()->all());
-        }
-
-        try {
-            $contact = Contact::where('account_id', auth()->user()->account_id)
-                ->where('id', $request->input('contact_id'))
-                ->firstOrFail();
-        } catch (ModelNotFoundException $e) {
-            return $this->respondNotFound();
-        }
-
-        try {
-            $task->update($request->all());
-        } catch (QueryException $e) {
-            return $this->respondNotTheRightParameters();
+        } catch (ValidationException $e) {
+            return $this->respondValidatorFailed($e->validator);
         }
 
         return new TaskResource($task);
@@ -139,16 +108,17 @@ class ApiTaskController extends ApiController
     public function destroy(Request $request, $taskId)
     {
         try {
-            $task = Task::where('account_id', auth()->user()->account_id)
-                ->where('id', $taskId)
-                ->firstOrFail();
+            (new DestroyTask)->execute([
+                'task_id' => $taskId,
+                'account_id' => auth()->user()->account->id,
+            ]);
         } catch (ModelNotFoundException $e) {
             return $this->respondNotFound();
+        } catch (ValidationException $e) {
+            return $this->respondValidatorFailed($e->validator);
         }
 
-        $task->delete();
-
-        return $this->respondObjectDeleted($task->id);
+        return $this->respondObjectDeleted($taskId);
     }
 
     /**
@@ -167,6 +137,7 @@ class ApiTaskController extends ApiController
         }
 
         $tasks = $contact->tasks()
+                ->orderBy($this->sort, $this->sortDirection)
                 ->paginate($this->getLimitPerPage());
 
         return TaskResource::collection($tasks);

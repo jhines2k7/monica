@@ -1,114 +1,67 @@
 <div class="col-xs-12 col-sm-3 sidebar-menu">
-  <ul>
+  <ul class="mb4">
 
-    @if (Route::currentRouteName() == 'settings.index')
-    <li class="selected">
-      <i class="fa fa-cog" aria-hidden="true"></i>
-      {{ trans('settings.sidebar_settings') }}
-    </li>
-    @else
-    <li>
-      <i class="fa fa-cog" aria-hidden="true"></i>
-      <a href="/settings">{{ trans('settings.sidebar_settings') }}</a>
-    </li>
+    @component('components.sidebar', [
+      'route' => 'settings.index',
+      'icon' => 'fa fa-cog',
+      'title' => 'settings.sidebar_settings'])
+    @endcomponent
+
+    @component('components.sidebar', [
+      'route' => 'settings.personalization.index',
+      'icon' => 'fa fa-handshake-o',
+      'title' => 'settings.sidebar_personalization'])
+    @endcomponent
+
+    @component('components.sidebar', [
+      'route' => 'settings.storage.index',
+      'icon' => 'fa fa-cube',
+      'title' => 'settings.sidebar_settings_storage'])
+    @endcomponent
+
+    @component('components.sidebar', [
+      'route' => 'settings.export',
+      'icon' => 'fa fa-cloud-download',
+      'title' => 'settings.sidebar_settings_export'])
+    @endcomponent
+
+    @component('components.sidebar', [
+      'route' => 'settings.import',
+      'icon' => 'fa fa-cloud-upload',
+      'title' => 'settings.sidebar_settings_import'])
+    @endcomponent
+
+    @component('components.sidebar', [
+      'route' => 'settings.users.index',
+      'icon' => 'fa fa-user-circle-o',
+      'title' => 'settings.sidebar_settings_users'])
+    @endcomponent
+
+    @if (config('monica.requires_subscription') && ! auth()->user()->account->has_access_to_paid_version_for_free)
+      @component('components.sidebar', [
+        'route' => 'settings.subscriptions.index',
+        'icon' => 'fa fa-money',
+        'title' => 'settings.sidebar_settings_subscriptions'])
+      @endcomponent
     @endif
 
-    @if (Route::currentRouteName() == 'settings.personalization')
-    <li class="selected">
-      <i class="fa fa-handshake-o" aria-hidden="true"></i>
-      {{ trans('settings.sidebar_personalization') }}
-    </li>
-    @else
-    <li>
-      <i class="fa fa-handshake-o" aria-hidden="true"></i>
-      <a href="/settings/personalization">{{ trans('settings.sidebar_personalization') }}</a>
-    </li>
-    @endif
+    @component('components.sidebar', [
+      'route' => 'settings.tags.index',
+      'icon' => 'fa fa-tags',
+      'title' => 'settings.sidebar_settings_tags'])
+    @endcomponent
 
-    @if (Route::currentRouteName() == 'settings.export')
-    <li class="selected">
-      <i class="fa fa-cloud-download" aria-hidden="true"></i>
-      {{ trans('settings.sidebar_settings_export') }}
-    </li>
-    @else
-    <li>
-      <i class="fa fa-cloud-download" aria-hidden="true"></i>
-      <a href="/settings/export">{{ trans('settings.sidebar_settings_export') }}</a>
-    </li>
-    @endif
+    @component('components.sidebar', [
+      'route' => 'settings.api',
+      'icon' => 'fa fa-random',
+      'title' => 'settings.sidebar_settings_api'])
+    @endcomponent
 
-    @if (Route::currentRouteName() == 'settings.import')
-    <li class="selected">
-      <i class="fa fa-cloud-upload" aria-hidden="true"></i>
-      {{ trans('settings.sidebar_settings_import') }}
-    </li>
-    @else
-    <li>
-      <i class="fa fa-cloud-upload" aria-hidden="true"></i>
-      <a href="/settings/import">{{ trans('settings.sidebar_settings_import') }}</a>
-    </li>
-    @endif
+    @component('components.sidebar', [
+      'route' => 'settings.security.index',
+      'icon' => 'fa fa-shield',
+      'title' => 'settings.sidebar_settings_security'])
+    @endcomponent
 
-    @if (Route::currentRouteName() == 'settings.users')
-    <li class="selected">
-      <i class="fa fa-user-circle-o" aria-hidden="true"></i>
-      {{ trans('settings.sidebar_settings_users') }}
-    </li>
-    @else
-    <li>
-      <i class="fa fa-user-circle-o" aria-hidden="true"></i>
-      <a href="/settings/users">{{ trans('settings.sidebar_settings_users') }}</a>
-    </li>
-    @endif
-
-    @if (config('monica.requires_subscription'))
-      @if (Route::currentRouteName() == 'settings.subscriptions.index')
-      <li class="selected">
-        <i class="fa fa-money" aria-hidden="true"></i>
-        {{ trans('settings.sidebar_settings_subscriptions') }}
-      </li>
-      @else
-      <li>
-        <i class="fa fa-money" aria-hidden="true"></i>
-        <a href="/settings/subscriptions">{{ trans('settings.sidebar_settings_subscriptions') }}</a>
-      </li>
-      @endif
-    @endif
-
-    @if (Route::currentRouteName() == 'settings.tags')
-    <li class="selected">
-      <i class="fa fa-tags" aria-hidden="true"></i>
-      {{ trans('settings.sidebar_settings_tags') }}
-    </li>
-    @else
-    <li>
-      <i class="fa fa-tags" aria-hidden="true"></i>
-      <a href="/settings/tags">{{ trans('settings.sidebar_settings_tags') }}</a>
-    </li>
-    @endif
-
-    @if (Route::currentRouteName() == 'settings.api')
-    <li class="selected">
-      <i class="fa fa-random"></i>
-      {{ trans('settings.sidebar_settings_api') }}
-    </li>
-    @else
-    <li>
-      <i class="fa fa-random"></i>
-      <a href="/settings/api">{{ trans('settings.sidebar_settings_api') }}</a>
-    </li>
-    @endif
-
-    @if (Route::currentRouteName() == 'settings.security')
-    <li class="selected">
-      <i class="fa fa-cog"></i>
-      {{ trans('settings.sidebar_settings_security') }}
-    </li>
-    @else
-    <li>
-      <i class="fa fa-cog"></i>
-      <a href="/settings/security">{{ trans('settings.sidebar_settings_security') }}</a>
-    </li>
-    @endif
   </ul>
 </div>

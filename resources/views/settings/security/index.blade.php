@@ -11,10 +11,10 @@
         <div class="col-xs-12">
           <ul class="horizontal">
             <li>
-              <a href="/dashboard">{{ trans('app.breadcrumb_dashboard') }}</a>
+              <a href="{{ route('dashboard.index') }}">{{ trans('app.breadcrumb_dashboard') }}</a>
             </li>
             <li>
-              <a href="/settings">{{ trans('app.breadcrumb_settings') }}</a>
+              <a href="{{ route('settings.index') }}">{{ trans('app.breadcrumb_settings') }}</a>
             </li>
             <li>
               {{ trans('app.breadcrumb_settings_security') }}
@@ -32,61 +32,64 @@
 
       <div class="col-xs-12 col-md-9">
 
-        @include('partials.errors')
+        <div class="br3 ba b--gray-monica bg-white mb4">
+          <div class="pa3 bb b--gray-monica">
+            @include('partials.errors')
 
-        @if (session('status'))
-          <div class="alert alert-success">
-              {{ session('status') }}
-          </div>
-        @endif
-
-        <h3 class="with-actions">{{ trans('settings.security_title') }}</h3>
-        <p>{{ trans('settings.security_help') }}</p>
-
-        <form method="POST" action="/settings/security/passwordChange" class="settings-reset">
-          {{ csrf_field() }}
-
-          <h2>{{ trans('settings.password_change') }}</h2>
-
-          <div class="form-group">
-            <label for="password_current">{{ trans('settings.password_current') }}</label>
-            <input type="password" class="form-control" name="password_current" id="password_current" placeholder="{{ trans('settings.password_current_placeholder') }}" required />
-          </div>
-          <div class="form-group">
-            <label for="password">{{ trans('settings.password_new1') }}</label>
-            <input type="password" class="form-control" name="password" id="password" placeholder="{{ trans('settings.password_new1_placeholder') }}" required />
-          </div>
-          <div class="form-group">
-            <label for="password_confirmation">{{ trans('settings.password_new2') }}</label>
-            <input type="password" class="form-control" name="password_confirmation" id="password_confirmation" placeholder="{{ trans('settings.password_new2_placeholder') }}" required />
-          </div>
-          
-          <button type="submit" class="btn">{{ trans('settings.password_btn') }}</button>
-        </form>
-
-        @if (config('google2fa.enabled')===true)
-        <form class="settings-reset">
-          <h2>{{ trans('settings.2fa_title') }}</h2>
-
-          <div class="form-group">
-            @if ($is2FAActivated)
-              <a href="{{ url('settings/security/2fa-disable') }}" class="btn btn-warning">{{ trans('settings.2fa_disable_title') }}</a>
-            @else
-              <a href="{{ url('settings/security/2fa-enable') }}" class="btn btn-primary">{{ trans('settings.2fa_enable_title') }}</a>
+            @if (session('status'))
+              <div class="alert alert-success">
+                  {{ session('status') }}
+              </div>
             @endif
-          </div>          
-        </form>
 
-        {{-- 
-        <form class="settings-reset">
-          <h2>Recuperation codes</h2>
+            <h3 class="with-actions">{{ trans('settings.security_title') }}</h3>
+            <p>{{ trans('settings.security_help') }}</p>
 
-          <div class="form-group">
+            <form method="POST" action="{{ route('settings.security.passwordChange') }}" class="settings-reset">
+              {{ csrf_field() }}
+
+              <h2>{{ trans('settings.password_change') }}</h2>
+
+              <div class="form-group">
+                <label for="password_current">{{ trans('settings.password_current') }}</label>
+                <input type="password" class="form-control" name="password_current" id="password_current" placeholder="{{ trans('settings.password_current_placeholder') }}" required />
+              </div>
+              <div class="form-group">
+                <label for="password">{{ trans('settings.password_new1') }}</label>
+                <input type="password" class="form-control" name="password" id="password" placeholder="{{ trans('settings.password_new1_placeholder') }}" required />
+              </div>
+              <div class="form-group">
+                <label for="password_confirmation">{{ trans('settings.password_new2') }}</label>
+                <input type="password" class="form-control" name="password_confirmation" id="password_confirmation" placeholder="{{ trans('settings.password_new2_placeholder') }}" required />
+              </div>
+
+              <button type="submit" class="btn">{{ trans('settings.password_btn') }}</button>
+            </form>
+
+            @if (config('google2fa.enabled')===true || config('u2f.enable')===true)
+            <form class="settings-reset">
+              <h2>{{ trans('settings.2fa_title') }}</h2>
+
+              <recovery-codes></recovery-codes>
+
+              @if (config('google2fa.enabled')===true)
+                 <mfa-activate :activated="@if ($is2FAActivated) true @else false @endif"></mfa-activate>
+              @endif
+
+              @if (config('u2f.enable')===true)
+                <u2f-connector
+                  :method="'register-modal'"
+                  :currentkeys="{{ json_encode($currentkeys) }}"
+                  :timezone="{{ json_encode(auth()->user()->timezone) }}">
+                </u2f-connector>
+                <script src="{{ asset(mix('js/u2f-api.js')) }}" type="text/javascript"></script>
+              @endif
+
+            </form>
+
+            @endif
           </div>
-        </form>
-        --}}
-        @endif
-
+        </div>
       </div>
     </div>
   </div>

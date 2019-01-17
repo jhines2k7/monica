@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\Auth;
 
-use Auth;
+use App\Models\User\User;
 use Illuminate\Support\Str;
 use UnexpectedValueException;
 use App\Http\Requests\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use App\Http\Requests\PasswordChangeRequest;
@@ -20,7 +21,7 @@ class PasswordChangeController extends Controller
     protected $redirectTo = '/settings/security';
 
     /**
-     * Get usefull parameters from request.
+     * Get useful parameters from request.
      *
      * @param \App\Http\Requests\PasswordChangeRequest $request
      * @return array
@@ -111,7 +112,7 @@ class PasswordChangeController extends Controller
     }
 
     /**
-     * Set the new password if all validations have passed.
+     * Set the new password if all validation has passed.
      *
      * @param User $user
      * @param string $password
@@ -129,7 +130,7 @@ class PasswordChangeController extends Controller
     }
 
     /**
-     * Get the response for a successful password changed.
+     * Get the response for a successful password change.
      *
      * @param string $response
      * @return \Illuminate\Http\Response
@@ -141,7 +142,7 @@ class PasswordChangeController extends Controller
     }
 
     /**
-     * Get the response for a failed password changed.
+     * Get the response for a failed password change.
      *
      * @param string $response
      * @return \Illuminate\Http\Response

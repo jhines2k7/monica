@@ -1,204 +1,189 @@
 @extends('layouts.skeleton')
 
 @section('content')
-  <div class="people-show">
+  <section class="ph3 ph0-ns">
 
     {{-- Breadcrumb --}}
-    <div class="breadcrumb">
-      <div class="{{ Auth::user()->getFluidLayout() }}">
-        <div class="row">
-          <div class="col-xs-12">
-            <ul class="horizontal">
-              <li>
-                <a href="/dashboard">{{ trans('app.breadcrumb_dashboard') }}</a>
-              </li>
-              <li>
-                <a href="/people">{{ trans('app.breadcrumb_list_contacts') }}</a>
-              </li>
-              <li>
-                <a href="{{ route('people.show', $contact) }}">{{ $contact->getCompleteName(auth()->user()->name_order) }}</a>
-              </li>
-              <li>
-                {{ trans('people.edit_contact_information') }}
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
+    <div class="mt4 mw7 center mb3">
+      <p><a href="{{ route('people.show', $contact) }}">< {{ $contact->name }}</a></p>
+      <h3 class="f3 fw5">{{ trans('people.information_edit_title', ['name' => $contact->first_name]) }}</h3>
+
+      @if (! auth()->user()->account->hasLimitations())
+      <p class="import">{!! trans('people.people_add_import', ['url' => 'settings/import']) !!}</p>
+      @endif
     </div>
 
-    <!-- Page content -->
-    <div class="main-content central-form">
-      <div class="{{ Auth::user()->getFluidLayout() }}">
-        <div class="row">
-          <div class="col-xs-12 col-sm-6 col-sm-offset-3">
-            <form method="POST" action="/people/{{ $contact->id }}/update" enctype="multipart/form-data">
-              {{ csrf_field() }}
+    <div class="mw7 center br3 ba b--gray-monica bg-white mb5">
+      <form method="POST" action="{{ route('people.update', $contact) }}" enctype="multipart/form-data">
+        @method('PUT')
+        {{ csrf_field() }}
 
-              @include('partials.errors')
+        @include('partials.errors')
 
-              <h2>{{ trans('people.information_edit_title', ['name' => $contact->first_name]) }}</h2>
+        {{-- Name --}}
+        <div class="pa4-ns ph3 pv2 bb b--gray-monica">
+          {{-- This check is for the cultures that are used to say the last name first --}}
+          <div class="mb3 mb0-ns">
+            @if (auth()->user()->getNameOrderForForms() == 'firstname')
 
-              <p class="delete-contact">
-                {{ trans('people.people_delete_message') }}
-                <a href="#" onclick="if (confirm('{{ trans('people.people_delete_confirmation') }}')) { $('#contact-delete-form').submit(); } return false;">{{ trans('people.people_delete_click_here') }}</a>.
-              </p>
-
-              {{-- Gender --}}
-              <label>{{ trans('people.people_add_gender') }}</label>
-
-              <fieldset class="form-group">
-                <label class="form-check-inline" for="genderNone">
-                  @if ($contact->gender == 'none')
-                  <input type="radio" class="form-check-input" name="gender" id="genderNone" value="none" checked>
-                  @else
-                  <input type="radio" class="form-check-input" name="gender" id="genderNone" value="none">
-                  @endif
-                  {{ trans('app.gender_none') }}
-                </label>
-
-                <label class="form-check-inline" for="genderMale">
-                  @if ($contact->gender == 'male')
-                  <input type="radio" class="form-check-input" name="gender" id="genderMale" value="male" checked>
-                  @else
-                  <input type="radio" class="form-check-input" name="gender" id="genderMale" value="male">
-                  @endif
-                  {{ trans('app.gender_male') }}
-                </label>
-
-                <label class="form-check-inline" for="genderFemale">
-                  @if ($contact->gender == 'female')
-                  <input type="radio" class="form-check-input" name="gender" id="genderFemale" value="female" checked>
-                  @else
-                  <input type="radio" class="form-check-input" name="gender" id="genderFemale" value="female">
-                  @endif
-                  {{ trans('app.gender_female') }}
-                </label>
-              </fieldset>
-
-              {{-- Avatar --}}
-              <div class="form-group">
-                <label for="avatar">{{ trans('people.information_edit_avatar') }}</label>
-                <input type="file" class="form-control-file" name="avatar" id="avatar">
-                <small id="fileHelp" class="form-text text-muted">{{ trans('people.information_edit_max_size', ['size' => 10]) }}</small>
+            <div class="dt-ns dt--fixed di">
+              <div class="dtc-ns pr2-ns pb0-ns w-100 pb3">
+                <form-input
+                  value="{{ $contact->first_name }}"
+                  :input-type="'text'"
+                  :id="'firstname'"
+                  :required="true"
+                  :title="'{{ trans('people.people_add_firstname') }}'">
+                </form-input>
               </div>
-
-              {{-- This check is for the cultures that are used to say the last name first --}}
-              @if (auth()->user()->name_order == 'firstname_first')
-
-              {{-- First name --}}
-              <div class="form-group">
-                <label for="firstname">{{ trans('people.information_edit_firstname') }}</label>
-                <input type="text" class="form-control" name="firstname" id="firstname" value="{{ $contact->first_name }}" autofocus required>
+              <div class="dtc-ns pr2-ns pb0-ns w-100 pb3">
+                <form-input
+                  value="{{ $contact->last_name }}"
+                  :input-type="'text'"
+                  :id="'lastname'"
+                  :required="false"
+                  :title="'{{ trans('people.people_add_lastname') }}'">
+                </form-input>
               </div>
-
-              {{-- Last name --}}
-              <div class="form-group">
-                <label for="lastname">{{ trans('people.information_edit_lastname') }}</label>
-                <input type="text" class="form-control" name="lastname" id="lastname" value="{{ $contact->last_name }}">
+              <div class="dtc-ns pb0-ns w-100">
+                <form-input
+                  value="{{ $contact->nickname }}"
+                  :input-type="'text'"
+                  :id="'nickname'"
+                  :required="false"
+                  :title="'{{ trans('people.people_add_nickname') }}'">
+                </form-input>
               </div>
+            </div>
 
-              @else
+            @else
 
-              {{-- Last name --}}
-              <div class="form-group">
-                <label for="lastname">{{ trans('people.information_edit_lastname') }}</label>
-                <input type="text" class="form-control" name="lastname" id="lastname" value="{{ $contact->last_name }}">
+            <div class="dt-ns dt--fixed di">
+              <div class="dtc-ns pr2-ns pb0-ns w-100 pb3">
+                <form-input
+                  value="{{ $contact->last_name }}"
+                  :input-type="'text'"
+                  :id="'lastname'"
+                  :required="false"
+                  :title="'{{ trans('people.people_add_lastname') }}'">
+                </form-input>
               </div>
-
-              {{-- First name --}}
-              <div class="form-group">
-                <label for="firstname">{{ trans('people.information_edit_firstname') }}</label>
-                <input type="text" class="form-control" name="firstname" id="firstname" value="{{ $contact->first_name }}" autofocus required>
+              <div class="dtc-ns pr2-ns pb0-ns w-100 pb3">
+                <form-input
+                  value="{{ $contact->first_name }}"
+                  :input-type="'text'"
+                  :id="'firstname'"
+                  :required="true"
+                  :title="'{{ trans('people.people_add_firstname') }}'">
+                </form-input>
               </div>
-
-              @endif
-
-              {{-- Birthdate --}}
-              <fieldset class="form-group dates">
-
-                {{-- Don't know the birthdate --}}
-                <div class="form-check">
-                  <label class="form-check-label" for="birthdateApproximate_unknown">
-                    <input type="radio" class="form-check-input" name="birthdate" id="birthdateApproximate_unknown" value="unknown" {{ is_null($contact->birthday_special_date_id) ? 'checked' : '' }}>
-
-                    <div class="form-inline">
-                      {{ trans('people.significant_other_add_unknown') }}
-                    </div>
-                  </label>
-                </div>
-
-                {{-- Approximate birthdate --}}
-                <div class="form-check">
-                  <label class="form-check-label" for="birthdateApproximate_approximate">
-                    <input type="radio" class="form-check-input" name="birthdate" id="birthdateApproximate_approximate" value="approximate" {{ is_null($contact->birthday_special_date_id) ? '' : ($contact->birthdate->is_age_based == true ? 'checked' : '') }}>
-
-                    <div class="form-inline">
-                      {{ trans('people.information_edit_probably') }}
-
-                      <input type="number" class="form-control" name="age" id="age"
-                              value="{{ (is_null($contact->birthdate)) ? 1 : $contact->birthdate->getAge() }}"
-                              min="0"
-                              max="120">
-
-                      {{ trans('people.information_edit_probably_yo') }}
-                    </div>
-                  </label>
-                </div>
-
-                {{-- Exact birthdate --}}
-                <div class="form-check">
-                  <label class="form-check-label" for="birthdateApproximate_exact">
-                      <input type="radio" class="form-check-input" name="birthdate" id="birthdateApproximate_exact" value="exact" {{ is_null($contact->birthday_special_date_id) ? '' : ($contact->birthdate->is_age_based == true ? '' : 'checked') }}>
-
-                      <div class="form-inline">
-                        {{ trans('people.information_edit_exact') }}
-
-                        @include('partials.components.date-select', ['contact' => $contact, 'specialDate' => $contact->birthdate, 'class' => 'birthdate'])
-                      </div>
-                  </label>
-                </div>
-                <p class="help">{{ trans('people.information_edit_help') }}</p>
-              </fieldset>
-
-              {{-- Is the contact deceased? --}}
-              <div class="form-group">
-                <div class="form-check">
-                  <label class="form-check-label">
-                    <input class="form-check-input" id="markPersonDeceased" name="markPersonDeceased" type="checkbox" value="markPersonDeceased"
-                    {{ ($contact->is_dead == true) ? 'checked' : '' }}>
-                    {{ trans('people.deceased_mark_person_deceased') }}
-                  </label>
-                </div>
-                <div class="form-check {{ ($contact->is_dead == false) ? 'hidden' : '' }}" id="datePersonDeceased">
-                  <label class="form-check-label">
-                    <input class="form-check-input" id="checkboxDatePersonDeceased" name="checkboxDatePersonDeceased" type="checkbox" value="checkboxDatePersonDeceased" {{ ($contact->deceasedDate != null) ? 'checked' : '' }}>
-                    {{ trans('people.deceased_know_date') }}
-
-                    @include('partials.components.date-select', ['contact' => $contact, 'specialDate' => $contact->deceasedDate, 'class' => 'deceased_date'])
-
-                </div>
-                <div class="form-check {{ ($contact->deceasedDate == null) ? 'hidden' : '' }}" id="reminderDeceased">
-                  <label class="form-check-label">
-                    <input class="form-check-input" id="addReminderDeceased" name="addReminderDeceased" type="checkbox" value="addReminderDeceased" {{ ($contact->deceasedDate != null) ? (($contact->deceasedDate->reminder_id != null) ? 'checked' : '') : '' }}>
-                    {{ trans('people.deceased_add_reminder') }}
-                  </label>
-                </div>
+              <div class="dtc-ns pb0-ns w-100">
+                <form-input
+                  value="{{ $contact->nickname }}"
+                  :input-type="'text'"
+                  :id="'nickname'"
+                  :required="false"
+                  :title="'{{ trans('people.information_edit_description') }}'">
+                </form-input>
               </div>
+            </div>
 
-              <div class="form-group actions">
-                <button type="submit" class="btn btn-primary">{{ trans('app.save') }}</button>
-                <a href="{{ route('people.show', $contact) }}" class="btn btn-secondary">{{ trans('app.cancel') }}</a>
-              </div> <!-- .form-group -->
-            </form>
+            @endif
           </div>
         </div>
-      </div>
-    </div>
 
+        {{-- Gender --}}
+        <div class="pa4-ns ph3 pv2 bb b--gray-monica">
+          <div class="mb3 mb0-ns">
+            <form-select
+              :options="{{ $genders }}"
+              value="{{ $contact->gender_id }}"
+              :required="true"
+              :title="'{{ trans('people.people_add_gender') }}'"
+              :id="'gender'">
+            </form-select>
+          </div>
+        </div>
+
+        {{-- Description --}}
+        <div class="pa4-ns ph3 pv2 bb b--gray-monica">
+          <div class="mb3 mb0-ns">
+            <form-input
+              value="{{ $contact->description }}"
+              :input-type="'text'"
+              :id="'description'"
+              :required="false"
+              :title="'{{ trans('people.information_edit_description') }}'">
+            </form-input>
+            <small id="emailHelp" class="form-text text-muted">{{ trans('people.information_edit_description_help') }}</small>
+          </div>
+        </div>
+
+        {{-- Avatar --}}
+        <div class="pa4-ns ph3 pv2 bb b--gray-monica">
+          <div class="mb3 mb0-ns">
+            <label for="avatar">{{ trans('people.information_edit_avatar') }}</label>
+            <input type="file" class="form-control-file" name="avatar" id="avatar">
+            <small id="fileHelp" class="form-text text-muted">{{ trans('people.information_edit_max_size', ['size' => config('monica.max_upload_size')]) }}</small>
+          </div>
+        </div>
+
+        {{-- Birthdate --}}
+        <form-specialdate
+          :months="{{ $months }}"
+          :days="{{ $days }}"
+          :month="{{ $month }}"
+          :day="{{ $day }}"
+          :age="'{{ $age }}'"
+          :default-date="'{{ $birthdate }}'"
+          :locale="'{{ auth()->user()->locale }}'"
+          :reminder={{ $hasBirthdayReminder }}
+          :value="'{{ $birthdayState }}'"
+        ></form-specialdate>
+
+        {{-- Is the contact deceased? --}}
+        <div class="pa4-ns ph3 pv2 bb b--gray-monica">
+          <div class="mb3 mb0-ns">
+            <div class="form-check">
+              <label class="pointer">
+                <input class="pointer" id="is_deceased" name="is_deceased" type="checkbox" value="is_deceased"
+                {{ $contact->is_dead ? 'checked' : '' }}>
+                {{ trans('people.deceased_mark_person_deceased') }}
+              </label>
+            </div>
+            <div class="form-check {{ $contact->is_dead ? '' : 'hidden' }}" id="datePersonDeceased">
+            <label class="pointer">
+              <input class="pointer" id="is_deceased_date_known" name="is_deceased_date_known" type="checkbox" value="is_deceased_date_known" {{ ($contact->deceasedDate != null) ? 'checked' : '' }}>
+              {{ trans('people.deceased_know_date') }}
+
+              @include('partials.components.date-select', ['contact' => $contact, 'specialDate' => $contact->deceasedDate, 'class' => 'deceased_date'])
+
+            </div>
+            <div class="form-check {{ $contact->deceasedDate == null ? 'hidden' : '' }}" id="reminderDeceased">
+              <label class="pointer">
+                <input class="pointer" id="add_reminder_deceased" name="add_reminder_deceased" type="checkbox" value="add_reminder_deceased" {{ ($contact->deceasedDate != null) ? (($contact->deceasedDate->reminder_id != null) ? 'checked' : '') : '' }}>
+                {{ trans('people.deceased_add_reminder') }}
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {{-- Form actions --}}
+        <div class="ph4-ns ph3 pv3 bb b--gray-monica">
+          <div class="flex-ns justify-between">
+            <div>
+                <a href="{{ route('people.show', $contact) }}"><button class="btn btn-secondary w-auto-ns w-100 mb2 pb0-ns">{{ trans('app.cancel') }}</button></a>
+            </div>
+            <div>
+              <button class="btn btn-primary w-auto-ns w-100 mb2 pb0-ns" name="save" type="submit">{{ trans('app.save') }}</button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </div>
   </div>
 
-  <form method="POST" action="{{ action('ContactsController@delete', $contact) }}" id="contact-delete-form" class="hidden">
+  <form method="POST" action="{{ route('people.destroy', $contact) }}" id="contact-delete-form" class="hidden">
     {{ method_field('DELETE') }}
     {{ csrf_field() }}
   </form>
